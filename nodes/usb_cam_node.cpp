@@ -41,6 +41,11 @@
 #include <camera_info_manager/camera_info_manager.h>
 #include <sstream>
 
+#include <nodelet/nodelet.h>
+#include <pluginlib/class_list_macros.h>
+
+#include <boost/thread.hpp>
+
 class UsbCamNode
 {
 public:
@@ -59,8 +64,8 @@ public:
   bool autofocus_, autoexposure_, auto_white_balance_;
   boost::shared_ptr<camera_info_manager::CameraInfoManager> cinfo_;
 
-  UsbCamNode() :
-      node_("~")
+  UsbCamNode(ros::NodeHandle & nh) :
+      node_(nh)
   {
     // advertise the main image topic
     image_transport::ImageTransport it(node_);
@@ -280,10 +285,53 @@ private:
   }
 };
 
+class UsbCamNodelet : public nodelet::Nodelet
+{
+public:
+  UsbCamNodelet(){};
+  ~UsbCamNodelet(){
+	  //deviceThread_->join();
+  };
+
+  /**
+   * @brief Initialise the nodelet
+   *
+   * This function is called, when the nodelet manager loads the nodelet.
+   */
+  virtual void onInit()
+  {
+    ros::NodeHandle nh = this->getPrivateNodeHandle();
+
+    // resolve node(let) name
+    std::string name = nh.getUnresolvedNamespace();
+    //NODELET_INFO_STREAM("Namespace " << name);
+    int pos = name.find_last_of('/');
+    name = name.substr(pos + 1);
+
+    NODELET_INFO_STREAM("Initialising nodelet... [" << name << "]");
+    controller_.reset(new UsbCamNode(nh));
+
+    deviceThread_ = boost::shared_ptr< boost::thread >
+        (new boost::thread(boost::bind(&UsbCamNodelet::spin, this)));
+  }
+
+  void spin(){
+	  controller_->spin();
+  }
+
+private:
+  boost::shared_ptr<UsbCamNode> controller_;
+  boost::shared_ptr<boost::thread> deviceThread_;
+};
+
+PLUGINLIB_EXPORT_CLASS(UsbCamNodelet,
+                       nodelet::Nodelet);
+
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "usb_cam");
-  UsbCamNode a;
+  ros::NodeHandle nh("~");
+  UsbCamNode a(nh);
   a.spin();
   return EXIT_SUCCESS;
 }
