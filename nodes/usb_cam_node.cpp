@@ -47,6 +47,11 @@
 
 #include <boost/thread.hpp>
 
+#include <nodelet/nodelet.h>
+#include <pluginlib/class_list_macros.h>
+
+#include <boost/thread.hpp>
+
 class UsbCamNode
 {
 public:
