@@ -40,6 +40,12 @@
 #include <image_transport/image_transport.h>
 #include <camera_info_manager/camera_info_manager.h>
 #include <sstream>
+#include <string>
+
+#include <nodelet/nodelet.h>
+#include <pluginlib/class_list_macros.h>
+
+#include <boost/thread.hpp>
 
 class UsbCamNode
 {
@@ -48,9 +54,9 @@ public:
   ros::NodeHandle node_;
 
   // shared image message
-  sensor_msgs::Image img_;
   usb_cam_camera_image_t *camera_image_;
   image_transport::CameraPublisher image_pub_;
+  std::string frame_id_;
 
   // parameters
   std::string video_device_name_, io_method_name_, pixel_format_name_, camera_name_, camera_info_url_;
@@ -59,8 +65,8 @@ public:
   bool autofocus_, autoexposure_, auto_white_balance_;
   boost::shared_ptr<camera_info_manager::CameraInfoManager> cinfo_;
 
-  UsbCamNode() :
-      node_("~")
+  UsbCamNode(ros::NodeHandle & nh) :
+      node_(nh)
   {
     // advertise the main image topic
     image_transport::ImageTransport it(node_);
@@ -90,7 +96,7 @@ public:
     node_.param("white_balance", white_balance_, 4000);
 
     // load the camera info
-    node_.param("camera_frame_id", img_.header.frame_id, std::string("head_camera"));
+    node_.param("camera_frame_id", frame_id_, std::string("head_camera"));
     node_.param("camera_name", camera_name_, std::string("head_camera"));
     node_.param("camera_info_url", camera_info_url_, std::string(""));
     cinfo_.reset(new camera_info_manager::CameraInfoManager(node_, camera_name_, camera_info_url_));
@@ -215,19 +221,21 @@ public:
   {
     // grab the image
     usb_cam_camera_grab_image(camera_image_);
+    sensor_msgs::ImagePtr imgptr(new sensor_msgs::Image);
+    imgptr->header.frame_id = frame_id_;
     // fill the info
-    fillImage(img_, "rgb8", camera_image_->height, camera_image_->width, 3 * camera_image_->width,
+    fillImage(*imgptr, "rgb8", camera_image_->height, camera_image_->width, 3 * camera_image_->width,
               camera_image_->image);
     // stamp the image
-    img_.header.stamp = ros::Time::now();
+    imgptr->header.stamp = ros::Time::now();
 
     // grab the camera info
     sensor_msgs::CameraInfoPtr ci(new sensor_msgs::CameraInfo(cinfo_->getCameraInfo()));
-    ci->header.frame_id = img_.header.frame_id;
-    ci->header.stamp = img_.header.stamp;
+    ci->header.frame_id = imgptr->header.frame_id;
+    ci->header.stamp = imgptr->header.stamp;
 
     // publish the image
-    image_pub_.publish(img_, *ci);
+    image_pub_.publish(imgptr, ci);
 
     return true;
   }
@@ -280,10 +288,53 @@ private:
   }
 };
 
+class UsbCamNodelet : public nodelet::Nodelet
+{
+public:
+  UsbCamNodelet(){};
+  ~UsbCamNodelet(){
+	  //deviceThread_->join();
+  };
+
+  /**
+   * @brief Initialise the nodelet
+   *
+   * This function is called, when the nodelet manager loads the nodelet.
+   */
+  virtual void onInit()
+  {
+    ros::NodeHandle nh = this->getPrivateNodeHandle();
+
+    // resolve node(let) name
+    std::string name = nh.getUnresolvedNamespace();
+    //NODELET_INFO_STREAM("Namespace " << name);
+    int pos = name.find_last_of('/');
+    name = name.substr(pos + 1);
+
+    NODELET_INFO_STREAM("Initialising nodelet... [" << name << "]");
+    controller_.reset(new UsbCamNode(nh));
+
+    deviceThread_ = boost::shared_ptr< boost::thread >
+        (new boost::thread(boost::bind(&UsbCamNodelet::spin, this)));
+  }
+
+  void spin(){
+	  controller_->spin();
+  }
+
+private:
+  boost::shared_ptr<UsbCamNode> controller_;
+  boost::shared_ptr<boost::thread> deviceThread_;
+};
+
+PLUGINLIB_EXPORT_CLASS(UsbCamNodelet,
+                       nodelet::Nodelet);
+
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "usb_cam");
-  UsbCamNode a;
+  ros::NodeHandle nh("~");
+  UsbCamNode a(nh);
   a.spin();
   return EXIT_SUCCESS;
 }

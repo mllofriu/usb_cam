@@ -4,7 +4,10 @@ project(usb_cam)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS image_transport roscpp std_msgs sensor_msgs camera_info_manager)
+find_package(catkin REQUIRED COMPONENTS image_transport roscpp std_msgs sensor_msgs camera_info_manager nodelet)
+
+# This driver uses Boost threads
+find_package(Boost REQUIRED COMPONENTS thread)
 
 ## pkg-config libraries
 find_package(PkgConfig REQUIRED)
@@ -31,6 +34,7 @@ include_directories(include
   ${catkin_INCLUDE_DIRS}
   ${avcodec_INCLUDE_DIRS}
   ${swscale_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIR}
 )
 
 ## Build the USB camera library
@@ -48,6 +52,16 @@ target_link_libraries(${PROJECT_NAME}_node
   ${avcodec_LIBRARIES}
   ${swscale_LIBRARIES}
   ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES}
+)
+
+add_library(${PROJECT_NAME}_nodelet nodes/usb_cam_node.cpp)
+target_link_libraries(${PROJECT_NAME}_nodelet
+  ${PROJECT_NAME}
+  ${avcodec_LIBRARIES}
+  ${swscale_LIBRARIES}
+  ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES}
 )
 
 #############
@@ -55,7 +69,7 @@ target_link_libraries(${PROJECT_NAME}_node
 #############
 
 ## Mark executables and/or libraries for installation
-install(TARGETS ${PROJECT_NAME}_node ${PROJECT_NAME}
+install(TARGETS ${PROJECT_NAME}_node ${PROJECT_NAME}_nodelet ${PROJECT_NAME}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
