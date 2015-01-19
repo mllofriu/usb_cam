@@ -229,7 +229,7 @@ public:
     sensor_msgs::ImagePtr imgptr(new sensor_msgs::Image);
     imgptr->header.frame_id = frame_id_;
     // fill the info
-    fillImage(*imgptr, "rgb8", camera_image_->height, camera_image_->width, 3 * camera_image_->width,
+    fillImage(*imgptr, "mono8", camera_image_->height, camera_image_->width, camera_image_->width,
               camera_image_->image);
     // stamp the image
     imgptr->header.stamp = ros::Time::now();

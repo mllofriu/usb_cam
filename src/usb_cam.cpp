@@ -379,6 +379,20 @@ static void yuyv2rgb(char *YUV, char *RGB, int NumPixels)
   }
 }
 
+static void yuyv2mono(char *YUV, char *Mono, int NumPixels)
+{
+  int i, j;
+  unsigned char y0, y1;
+
+  for (i = 0, j = 0; i < (NumPixels << 1); i += 4, j += 2)
+  {
+    y0 = (unsigned char)YUV[i + 0];
+    y1 = (unsigned char)YUV[i + 2];
+    Mono[j] = y0;
+    Mono[j + 1] = y1;
+  }
+}
+
 void rgb242rgb(char *YUV, char *RGB, int NumPixels)
 {
   memcpy(RGB, YUV, NumPixels * 3);
@@ -485,7 +499,7 @@ static void process_image(const void * src, int len, usb_cam_camera_image_t *des
     }
     else
     {
-      yuyv2rgb((char*)src, dest->image, dest->width * dest->height);
+      yuyv2mono((char*)src, dest->image, dest->width * dest->height);
     }
   }
   else if (pixelformat == V4L2_PIX_FMT_UYVY)
