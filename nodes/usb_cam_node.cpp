@@ -225,6 +225,7 @@ public:
   bool take_and_send_image()
   {
     // grab the image
+	ros::Time nowT = ros::Time::now();
     usb_cam_camera_grab_image(camera_image_);
     sensor_msgs::ImagePtr imgptr(new sensor_msgs::Image);
     imgptr->header.frame_id = frame_id_;
@@ -232,7 +233,7 @@ public:
     fillImage(*imgptr, "mono8", camera_image_->height, camera_image_->width, camera_image_->width,
               camera_image_->image);
     // stamp the image
-    imgptr->header.stamp = ros::Time::now();
+    imgptr->header.stamp = nowT;
 
     // grab the camera info
     sensor_msgs::CameraInfoPtr ci(new sensor_msgs::CameraInfo(cinfo_->getCameraInfo()));
