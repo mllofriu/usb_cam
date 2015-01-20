@@ -382,14 +382,17 @@ static void yuyv2rgb(char *YUV, char *RGB, int NumPixels)
 static void yuyv2mono(char *YUV, char *Mono, int NumPixels)
 {
   int i, j;
-  unsigned char y0, y1;
 
-  for (i = 0, j = 0; i < (NumPixels << 1); i += 4, j += 2)
+  for (i = 0, j = 0; i < (NumPixels << 1); i += 16, j += 8)
   {
-    y0 = (unsigned char)YUV[i + 0];
-    y1 = (unsigned char)YUV[i + 2];
-    Mono[j] = y0;
-    Mono[j + 1] = y1;
+    Mono[j] = (unsigned char)YUV[i + 0];
+    Mono[j + 1] = (unsigned char)YUV[i + 2];
+    Mono[j + 2] = (unsigned char)YUV[i + 4];
+    Mono[j + 3] = (unsigned char)YUV[i + 6];
+    Mono[j + 4] = (unsigned char)YUV[i + 8];
+    Mono[j + 5] = (unsigned char)YUV[i + 10];
+    Mono[j + 6] = (unsigned char)YUV[i + 12];
+    Mono[j + 7] = (unsigned char)YUV[i + 14];
   }
 }
 
@@ -744,7 +747,7 @@ static void init_mmap(void)
 
   CLEAR(req);
 
-  req.count = 4;
+  req.count = 1;
   req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   req.memory = V4L2_MEMORY_MMAP;
 
@@ -761,11 +764,11 @@ static void init_mmap(void)
     }
   }
 
-  if (req.count < 2)
+  /*if (req.count < 2)
   {
     ROS_ERROR("Insufficient buffer memory on %s\n", camera_dev);
     exit(EXIT_FAILURE);
-  }
+  }*/
 
   buffers = (buffer*)calloc(req.count, sizeof(*buffers));
 
@@ -965,7 +968,7 @@ static void init_device(int image_width, int image_height, int framerate)
   ROS_DEBUG("Capability flag: 0x%x", stream_params.parm.capture.capability);
 
   stream_params.parm.capture.timeperframe.numerator = 1;
-  stream_params.parm.capture.timeperframe.denominator = framerate;
+  stream_params.parm.capture.timeperframe.denominator = 30; //framerate;
   if (xioctl(fd, VIDIOC_S_PARM, &stream_params) < 0)
     errno_exit("Couldn't set camera framerate\n");
   else

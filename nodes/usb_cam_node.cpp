@@ -224,8 +224,9 @@ public:
 
   bool take_and_send_image()
   {
+    // Assign time asap. Being conservative about how old the image is
+    ros::Time nowT = ros::Time::now();// - ros::Duration(1.0/30);
     // grab the image
-	ros::Time nowT = ros::Time::now();
     usb_cam_camera_grab_image(camera_image_);
     sensor_msgs::ImagePtr imgptr(new sensor_msgs::Image);
     imgptr->header.frame_id = frame_id_;
