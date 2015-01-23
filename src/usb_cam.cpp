@@ -968,7 +968,7 @@ static void init_device(int image_width, int image_height, int framerate)
   ROS_DEBUG("Capability flag: 0x%x", stream_params.parm.capture.capability);
 
   stream_params.parm.capture.timeperframe.numerator = 1;
-  stream_params.parm.capture.timeperframe.denominator = 30; //framerate;
+  stream_params.parm.capture.timeperframe.denominator = framerate;
   if (xioctl(fd, VIDIOC_S_PARM, &stream_params) < 0)
     errno_exit("Couldn't set camera framerate\n");
   else
