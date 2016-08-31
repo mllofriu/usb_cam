@@ -254,7 +254,7 @@ public:
     {
       if (!take_and_send_image())
         ROS_WARN("USB camera did not respond in time.");
-      ros::spinOnce();
+      //ros::spinOnce();
       loop_rate.sleep();
     }
     return true;
